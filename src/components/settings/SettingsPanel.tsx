@@ -207,28 +207,30 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </p>
           </div>
 
-          {/* Aspect Ratio (provider-specific) */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-              <Ratio className="h-4 w-4" />
-              Aspect Ratio
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {providerAspectRatios.map((ratio) => (
-                <button
-                  key={ratio}
-                  onClick={() => setAspectRatio(ratio)}
-                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                    aspectRatio === ratio
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  }`}
-                >
-                  {ASPECT_RATIO_LABELS[ratio] || ratio}
-                </button>
-              ))}
+          {/* Aspect Ratio (provider-specific) - OpenAI uses resolution for ratio */}
+          {currentProvider !== 'openai' && (
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                <Ratio className="h-4 w-4" />
+                Aspect Ratio
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {providerAspectRatios.map((ratio) => (
+                  <button
+                    key={ratio}
+                    onClick={() => setAspectRatio(ratio)}
+                    className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                      aspectRatio === ratio
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    }`}
+                  >
+                    {ASPECT_RATIO_LABELS[ratio] || ratio}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Auto Download */}
           <div>
