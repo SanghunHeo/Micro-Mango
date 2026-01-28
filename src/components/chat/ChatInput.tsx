@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from 'react'
+import { useState, useRef, useCallback, useEffect, type KeyboardEvent, type ClipboardEvent } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Send, Image as ImageIcon, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui'
@@ -82,27 +82,30 @@ export function ChatInput({ onSubmit, disabled }: ChatInputProps) {
     noKeyboard: true,
   })
 
-  // Handle paste
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items
-      if (!items) return
+  // Handle paste (works both on document and textarea)
+  const handlePaste = useCallback((e: ClipboardEvent<HTMLTextAreaElement> | globalThis.ClipboardEvent) => {
+    const clipboardData = 'clipboardData' in e ? e.clipboardData : null
+    const items = clipboardData?.items
+    if (!items) return
 
-      const imageItems = Array.from(items).filter((item) => item.type.startsWith('image/'))
-      if (imageItems.length === 0) return
+    const imageItems = Array.from(items).filter((item) => item.type.startsWith('image/'))
+    if (imageItems.length === 0) return
 
-      e.preventDefault()
+    e.preventDefault()
 
-      const files = imageItems
-        .map((item) => item.getAsFile())
-        .filter((file): file is File => file !== null)
+    const files = imageItems
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null)
 
-      onDrop(files)
-    }
-
-    document.addEventListener('paste', handlePaste)
-    return () => document.removeEventListener('paste', handlePaste)
+    onDrop(files)
   }, [onDrop])
+
+  // Document-level paste handler for when textarea is not focused
+  useEffect(() => {
+    const handler = (e: globalThis.ClipboardEvent) => handlePaste(e)
+    document.addEventListener('paste', handler)
+    return () => document.removeEventListener('paste', handler)
+  }, [handlePaste])
 
   // Remove image
   const handleRemoveImage = (id: string) => {
@@ -209,6 +212,7 @@ export function ChatInput({ onSubmit, disabled }: ChatInputProps) {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder="Describe the image you want to generate..."
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 pr-10 text-white placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px] max-h-[200px]"
             rows={1}

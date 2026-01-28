@@ -40,3 +40,104 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
+
+const MAX_IMAGE_DIMENSION = 4096
+
+/**
+ * Resize image if it exceeds 4K (4096px) in any dimension.
+ * Maintains aspect ratio and returns a new File object.
+ */
+export async function resizeImageIfNeeded(file: File): Promise<File> {
+  console.log(`[Resize] Processing: ${file.name}, size: ${formatFileSize(file.size)}, type: ${file.type}`)
+
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+
+      const { width, height } = img
+      console.log(`[Resize] Image loaded: ${width}x${height}`)
+
+      // Check if resize is needed
+      if (width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION) {
+        console.log(`[Resize] No resize needed, dimensions within ${MAX_IMAGE_DIMENSION}px`)
+        resolve(file)
+        return
+      }
+
+      // Calculate new dimensions maintaining aspect ratio
+      let newWidth = width
+      let newHeight = height
+
+      if (width > height) {
+        if (width > MAX_IMAGE_DIMENSION) {
+          newWidth = MAX_IMAGE_DIMENSION
+          newHeight = Math.round((height / width) * MAX_IMAGE_DIMENSION)
+        }
+      } else {
+        if (height > MAX_IMAGE_DIMENSION) {
+          newHeight = MAX_IMAGE_DIMENSION
+          newWidth = Math.round((width / height) * MAX_IMAGE_DIMENSION)
+        }
+      }
+
+      // Create canvas and resize
+      const canvas = document.createElement('canvas')
+      canvas.width = newWidth
+      canvas.height = newHeight
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'))
+        return
+      }
+
+      // Use high quality image smoothing
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(img, 0, 0, newWidth, newHeight)
+
+      // Convert to blob
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('Failed to convert canvas to blob'))
+            return
+          }
+
+          // Create new file with same name
+          const resizedFile = new File([blob], file.name, {
+            type: 'image/png',
+            lastModified: Date.now(),
+          })
+
+          console.log(
+            `Image resized: ${width}x${height} -> ${newWidth}x${newHeight} (${formatFileSize(file.size)} -> ${formatFileSize(resizedFile.size)})`
+          )
+
+          resolve(resizedFile)
+        },
+        'image/png',
+        0.92 // Quality for PNG (mainly affects metadata)
+      )
+    }
+
+    img.onerror = (e) => {
+      URL.revokeObjectURL(url)
+      console.error(`[Resize] Failed to load image: ${file.name}`, e)
+      reject(new Error(`Failed to load image: ${file.name}`))
+    }
+
+    img.src = url
+    console.log(`[Resize] Loading image from blob URL...`)
+  })
+}
+
+/**
+ * Resize multiple images in parallel
+ */
+export async function resizeImagesIfNeeded(files: File[]): Promise<File[]> {
+  return Promise.all(files.map(resizeImageIfNeeded))
+}

@@ -43,7 +43,7 @@ export function ChatContainer({ onGenerate }: ChatContainerProps) {
         {messages.length === 0 && !isGenerating ? (
           <div className="h-full flex flex-col items-center justify-center text-gray-500 p-8">
             <Sparkles className="h-16 w-16 mb-4 text-yellow-400/50" />
-            <h2 className="text-xl font-medium text-gray-400 mb-2">Welcome to Nano Banana</h2>
+            <h2 className="text-xl font-medium text-gray-400 mb-2">Welcome to Micro Mango</h2>
             <p className="text-center max-w-md">
               Describe the image you want to create, or drop a reference image to get started.
             </p>

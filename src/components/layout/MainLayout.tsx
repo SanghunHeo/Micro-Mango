@@ -2,13 +2,19 @@ import type { ReactNode } from 'react'
 
 interface MainLayoutProps {
   children: ReactNode
+  headerHeight?: number
 }
 
-export function MainLayout({ children }: MainLayoutProps) {
+export function MainLayout({ children, headerHeight = 64 }: MainLayoutProps) {
   return (
-    // pt-14 for header, md:pt-14 for desktop, pt-24 for mobile (header + token estimator)
-    <main className="min-h-screen bg-gray-950 pt-24 md:pt-14">
-      <div className="max-w-4xl mx-auto h-[calc(100vh-6rem)] md:h-[calc(100vh-3.5rem)] flex flex-col">
+    <main
+      className="min-h-screen bg-gray-950 transition-[padding-top] duration-150"
+      style={{ paddingTop: `${headerHeight}px` }}
+    >
+      <div
+        className="overflow-y-auto"
+        style={{ height: `calc(100vh - ${headerHeight}px)` }}
+      >
         {children}
       </div>
     </main>

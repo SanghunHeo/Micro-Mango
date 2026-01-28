@@ -38,7 +38,7 @@ export function ChatMessage({ message, onDownload }: ChatMessageProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="font-medium text-sm text-white">
-            {isUser ? 'You' : 'Nano Banana'}
+            {isUser ? 'You' : 'Micro Mango'}
           </span>
           <span className="text-xs text-gray-500">
             {new Date(message.timestamp).toLocaleTimeString()}

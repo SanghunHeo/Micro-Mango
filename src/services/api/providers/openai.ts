@@ -9,6 +9,9 @@ class OpenAIImagesProvider implements IImageProvider {
   ): Promise<void> {
     const endpoint = PROVIDER_ENDPOINTS.openai
 
+    console.log('[OpenAI] API request started, model:', config.model)
+    callbacks.onProgress?.(10, 'API 요청 중...')
+
     // Map resolution to OpenAI size format
     const size = this.mapResolution(request.resolution, request.aspectRatio)
 
@@ -34,10 +37,13 @@ class OpenAIImagesProvider implements IImageProvider {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         const errorMessage = errorData.error?.message || `API error: ${response.status}`
+        console.error('[OpenAI] API error:', errorMessage)
         callbacks.onError(errorMessage)
         return
       }
 
+      console.log('[OpenAI] Response received')
+      callbacks.onProgress?.(80, '이미지 수신 중...')
       const data = await response.json()
 
       if (data.data && data.data[0]) {
@@ -45,17 +51,22 @@ class OpenAIImagesProvider implements IImageProvider {
 
         if (data.data[0].url && !data.data[0].b64_json) {
           // If we got a URL, fetch and convert to base64
+          console.log('[OpenAI] Converting URL to base64')
           const imageBase64 = await this.urlToBase64(data.data[0].url)
           callbacks.onFinalImage(imageBase64)
         } else {
           callbacks.onFinalImage(imageData)
         }
 
+        console.log('[OpenAI] Image processed successfully')
+        callbacks.onProgress?.(100, '완료!')
         callbacks.onComplete()
       } else {
+        console.error('[OpenAI] No image was generated')
         callbacks.onError('No image was generated')
       }
     } catch (error) {
+      console.error('[OpenAI] Error:', error)
       callbacks.onError(error instanceof Error ? error.message : 'Unknown error')
     }
   }

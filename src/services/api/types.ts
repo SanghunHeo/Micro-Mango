@@ -13,6 +13,7 @@ export interface StreamCallbacks {
   onFinalImage: (base64: string) => void
   onError: (error: string) => void
   onComplete: () => void
+  onProgress?: (progress: number, message: string) => void
 }
 
 export interface ProviderConfig {

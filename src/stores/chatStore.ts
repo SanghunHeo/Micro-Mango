@@ -62,6 +62,14 @@ export const useChatStore = create<ChatStore>()(
     }),
     {
       name: 'nanobanana-chat',
+      partialize: (state) => ({
+        // Persist messages WITHOUT large image data to avoid localStorage quota exceeded
+        messages: state.messages.map((msg) => ({
+          ...msg,
+          // Exclude large base64 image data
+          images: undefined,
+        })),
+      }),
     }
   )
 )

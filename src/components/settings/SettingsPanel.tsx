@@ -1,6 +1,6 @@
-import { X, Key, Monitor, Ratio, Cpu } from 'lucide-react'
+import { X, Key, Monitor, Ratio, Cpu, BarChart3, RefreshCw } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
-import { useSettingsStore } from '@/stores'
+import { useSettingsStore, useUsageStore, formatCost, PROVIDER_PRICING, getGenerationPrice } from '@/stores'
 import {
   PROVIDERS,
   PROVIDER_LABELS,
@@ -11,6 +11,7 @@ import {
   ASPECT_RATIO_LABELS,
   PROVIDER_CONSOLE_URLS,
 } from '@/utils/constants'
+import type { Provider } from '@/utils/constants'
 
 interface SettingsPanelProps {
   isOpen: boolean
@@ -32,6 +33,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     setModel,
     toggleAutoDownload,
   } = useSettingsStore()
+
+  const { usage, totalGenerations, totalEstimatedCost, resetUsage } = useUsageStore()
 
   // Get provider-specific options
   const providerModels = PROVIDER_MODELS[currentProvider]
@@ -158,6 +161,19 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
           </div>
 
+          {/* Current Price Estimate */}
+          <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-lg p-3 border border-green-800/50">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">현재 설정 기준 이미지당 예상 비용</span>
+              <span className="text-lg font-semibold text-green-400">
+                {formatCost(getGenerationPrice(currentProvider, model, resolution))}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {model} · {resolution}
+            </p>
+          </div>
+
           {/* Aspect Ratio (provider-specific) */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
@@ -200,6 +216,106 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 />
               </button>
             </label>
+          </div>
+
+          {/* Usage Statistics */}
+          <div className="border-t border-gray-800 pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                <BarChart3 className="h-4 w-4" />
+                사용량 통계
+              </label>
+              <button
+                onClick={() => resetUsage()}
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                title="통계 초기화"
+              >
+                <RefreshCw className="h-3 w-3" />
+                초기화
+              </button>
+            </div>
+
+            {/* Total Summary */}
+            <div className="bg-gray-800/50 rounded-lg p-3 mb-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500">총 생성 횟수</p>
+                  <p className="text-lg font-semibold text-white">{totalGenerations}회</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">예상 총 비용</p>
+                  <p className="text-lg font-semibold text-green-400">{formatCost(totalEstimatedCost)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Per-Provider Usage */}
+            <div className="space-y-3">
+              {PROVIDERS.map((provider) => {
+                const providerUsage = usage[provider as Provider]
+                const pricing = PROVIDER_PRICING[provider as Provider]
+                const successRate = providerUsage.generationCount > 0
+                  ? Math.round((providerUsage.successCount / providerUsage.generationCount) * 100)
+                  : 0
+
+                return (
+                  <div
+                    key={provider}
+                    className={`p-3 rounded-lg border transition-colors ${
+                      currentProvider === provider
+                        ? 'bg-blue-900/20 border-blue-700'
+                        : 'bg-gray-800/30 border-gray-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-300">
+                        {PROVIDER_LABELS[provider as Provider]}
+                      </span>
+                      {currentProvider === provider && (
+                        <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">현재</span>
+                      )}
+                    </div>
+
+                    {providerUsage.generationCount > 0 ? (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-500">생성</span>
+                          <span className="text-gray-300">
+                            {providerUsage.successCount}회 성공 / {providerUsage.failureCount}회 실패
+                            <span className="text-gray-500 ml-1">({successRate}%)</span>
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-500">예상 비용</span>
+                          <span className="text-green-400">{formatCost(providerUsage.estimatedCost)}</span>
+                        </div>
+                        {providerUsage.lastUsed && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500">마지막 사용</span>
+                            <span className="text-gray-400">
+                              {new Date(providerUsage.lastUsed).toLocaleString('ko-KR', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">아직 사용 기록 없음</p>
+                    )}
+
+                    <p className="text-[10px] text-gray-600 mt-2">{pricing.note}</p>
+                  </div>
+                )
+              })}
+            </div>
+
+            <p className="text-[10px] text-gray-600 mt-3 text-center">
+              * 예상 비용은 참고용이며 실제 청구 금액과 다를 수 있습니다
+            </p>
           </div>
         </div>
 
