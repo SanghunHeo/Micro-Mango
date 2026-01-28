@@ -22,6 +22,76 @@ interface AttachedImage {
   preview: string
 }
 
+// Individual image thumbnail with drag-to-replace support
+function ImageThumbnail({
+  image,
+  onRemove,
+  onReplace,
+}: {
+  image: AttachedImage
+  onRemove: (id: string) => void
+  onReplace: (id: string, file: File) => void
+}) {
+  const [isDragOver, setIsDragOver] = useState(false)
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      f.type.startsWith('image/')
+    )
+    if (files.length > 0) {
+      onReplace(image.id, files[0])
+    }
+  }
+
+  return (
+    <div
+      className={cn(
+        'relative group',
+        isDragOver && 'ring-2 ring-blue-500 ring-offset-1 ring-offset-gray-900'
+      )}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <img
+        src={image.preview}
+        alt="Attached"
+        className={cn(
+          'h-8 w-8 object-cover rounded border border-gray-700',
+          isDragOver && 'opacity-50'
+        )}
+      />
+      {isDragOver && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[8px] text-blue-400 font-medium">교체</span>
+        </div>
+      )}
+      <button
+        onClick={() => onRemove(image.id)}
+        className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <X className="h-3 w-3 text-white" />
+      </button>
+    </div>
+  )
+}
+
 interface HeaderProps {
   onOpenSettings: () => void
   onSubmit: (prompt: string, images: File[]) => void
@@ -208,6 +278,53 @@ export function Header({ onOpenSettings, onSubmit, disabled, onHeightChange }: H
     })
   }
 
+  // Replace image (drag-to-replace)
+  const handleReplaceImage = async (id: string, file: File) => {
+    console.log('[Header] Replacing image:', id, 'with:', file.name)
+
+    setIsProcessingImages(true)
+    setProcessingMessage('이미지 교체 중...')
+
+    try {
+      const [resizedFile] = await resizeImagesIfNeeded([file])
+
+      setAttachedImages((prev) => {
+        const oldImage = prev.find((img) => img.id === id)
+        if (oldImage) URL.revokeObjectURL(oldImage.preview)
+
+        return prev.map((img) =>
+          img.id === id
+            ? {
+                id: crypto.randomUUID(),
+                file: resizedFile,
+                preview: URL.createObjectURL(resizedFile),
+              }
+            : img
+        )
+      })
+    } catch (error) {
+      console.error('[Header] Failed to replace image:', error)
+      // Still try with original file
+      setAttachedImages((prev) => {
+        const oldImage = prev.find((img) => img.id === id)
+        if (oldImage) URL.revokeObjectURL(oldImage.preview)
+
+        return prev.map((img) =>
+          img.id === id
+            ? {
+                id: crypto.randomUUID(),
+                file,
+                preview: URL.createObjectURL(file),
+              }
+            : img
+        )
+      })
+    } finally {
+      setIsProcessingImages(false)
+      setProcessingMessage('')
+    }
+  }
+
   // Handle submit
   const handleSubmit = () => {
     if (!prompt.trim() && attachedImages.length === 0) return
@@ -359,19 +476,12 @@ export function Header({ onOpenSettings, onSubmit, disabled, onHeightChange }: H
             {attachedImages.length > 0 && (
               <div className="flex gap-1">
                 {attachedImages.map((img) => (
-                  <div key={img.id} className="relative group">
-                    <img
-                      src={img.preview}
-                      alt="Attached"
-                      className="h-8 w-8 object-cover rounded border border-gray-700"
-                    />
-                    <button
-                      onClick={() => handleRemoveImage(img.id)}
-                      className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="h-3 w-3 text-white" />
-                    </button>
-                  </div>
+                  <ImageThumbnail
+                    key={img.id}
+                    image={img}
+                    onRemove={handleRemoveImage}
+                    onReplace={handleReplaceImage}
+                  />
                 ))}
               </div>
             )}

@@ -1,4 +1,5 @@
-import { X, Key, Monitor, Ratio, Cpu, BarChart3, RefreshCw } from 'lucide-react'
+import { useState } from 'react'
+import { X, Key, Monitor, Ratio, Cpu, BarChart3, RefreshCw, Copy, Check } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
 import { useSettingsStore, useUsageStore, formatCost, PROVIDER_PRICING, getGenerationPrice } from '@/stores'
 import {
@@ -19,6 +20,8 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
+  const [copiedProvider, setCopiedProvider] = useState<Provider | null>(null)
+
   const {
     apiKeys,
     currentProvider,
@@ -35,6 +38,20 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   } = useSettingsStore()
 
   const { usage, totalGenerations, totalEstimatedCost, resetUsage } = useUsageStore()
+
+  // Copy API key to clipboard
+  const handleCopyApiKey = async (provider: Provider) => {
+    const key = apiKeys[provider]
+    if (!key) return
+
+    try {
+      await navigator.clipboard.writeText(key)
+      setCopiedProvider(provider)
+      setTimeout(() => setCopiedProvider(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy API key:', err)
+    }
+  }
 
   // Get provider-specific options
   const providerModels = PROVIDER_MODELS[currentProvider]
@@ -102,12 +119,28 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       <span className="text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded">현재</span>
                     )}
                   </div>
-                  <Input
-                    type="password"
-                    value={apiKeys[provider]}
-                    onChange={(e) => setApiKey(provider, e.target.value)}
-                    placeholder={`Enter ${PROVIDER_LABELS[provider]} API key`}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      value={apiKeys[provider]}
+                      onChange={(e) => setApiKey(provider, e.target.value)}
+                      placeholder={`Enter ${PROVIDER_LABELS[provider]} API key`}
+                      className="flex-1"
+                    />
+                    {apiKeys[provider] && (
+                      <button
+                        onClick={() => handleCopyApiKey(provider)}
+                        className="px-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
+                        title="Copy API key"
+                      >
+                        {copiedProvider === provider ? (
+                          <Check className="h-4 w-4 text-green-400" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <a
                     href={PROVIDER_CONSOLE_URLS[provider]}
                     target="_blank"

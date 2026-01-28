@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Download, RotateCcw, Copy, Trash2, AlertCircle, Clock, ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Download, RotateCcw, Copy, Trash2, AlertCircle, Clock, ImageIcon, X, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { useQueueStore, useInputStore, type QueueItem } from '@/stores'
 import { downloadImage } from '@/services/download'
 import { cn } from '@/utils/cn'
@@ -65,6 +65,7 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
   const [hoveredImageIndex, setHoveredImageIndex] = useState<number | null>(null)
   const [isHoveringInfo, setIsHoveringInfo] = useState(false)
   const [modalImageIndex, setModalImageIndex] = useState<number | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const finalImages = getFinalImages(item)
   const imageCount = finalImages.length
@@ -74,6 +75,17 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
   useEffect(() => {
     loadItemImages(item.id)
   }, [item.id, loadItemImages])
+
+  // Copy prompt to clipboard
+  const handleCopyPrompt = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(item.prompt)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy prompt:', err)
+    }
+  }, [item.prompt])
 
   // Handle keyboard navigation in modal
   useEffect(() => {
@@ -251,12 +263,25 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
         onMouseLeave={() => setIsHoveringInfo(false)}
       >
         {/* Prompt */}
-        <p className={cn(
-          'text-sm text-gray-200 mb-3',
-          item.status === 'completed' ? 'line-clamp-3' : 'line-clamp-2'
-        )}>
-          {item.prompt}
-        </p>
+        <div className="flex items-start gap-2 mb-3">
+          <p className={cn(
+            'flex-1 text-sm text-gray-200',
+            item.status === 'completed' ? 'line-clamp-3' : 'line-clamp-2'
+          )}>
+            {item.prompt}
+          </p>
+          <button
+            onClick={handleCopyPrompt}
+            className="flex-shrink-0 p-1 text-gray-500 hover:text-gray-300 transition-colors"
+            title="Copy prompt"
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-green-400" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </button>
+        </div>
 
         {/* Metadata badges */}
         <div className="flex flex-wrap gap-1.5 mb-3">
