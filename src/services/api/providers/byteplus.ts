@@ -30,6 +30,7 @@ class BytePlusSeedreamProvider implements IImageProvider {
       }))
     }
 
+    let completed = false
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -70,6 +71,7 @@ class BytePlusSeedreamProvider implements IImageProvider {
         console.log('[BytePlus] Image processed successfully')
         callbacks.onProgress?.(100, '완료!')
         callbacks.onFinalImage(imageBase64)
+        completed = true
         callbacks.onComplete()
       } else {
         console.error('[BytePlus] No image was generated')
@@ -78,6 +80,10 @@ class BytePlusSeedreamProvider implements IImageProvider {
     } catch (error) {
       console.error('[BytePlus] Error:', error)
       callbacks.onError(error instanceof Error ? error.message : 'Unknown error')
+    } finally {
+      if (!completed) {
+        callbacks.onComplete()
+      }
     }
   }
 

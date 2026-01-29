@@ -84,7 +84,9 @@ class GoogleNanoBananaProvider implements IImageProvider {
     let attempt = 0
     let consecutiveSameErrors = 0
     let lastErrorType = ''
+    let completed = false
 
+    try {
     while (attempt < MAX_RETRIES) {
       attempt++
       const isRetry = attempt > 1
@@ -240,6 +242,7 @@ class GoogleNanoBananaProvider implements IImageProvider {
         // Success!
         console.log('[Google] Stream complete, total chunks:', chunkCount, isRetry ? `(attempt ${attempt})` : '')
         callbacks.onProgress?.(100, '완료!')
+        completed = true
         callbacks.onComplete()
         return
 
@@ -272,6 +275,11 @@ class GoogleNanoBananaProvider implements IImageProvider {
     // Max retries reached
     console.error(`[Google] Max retries (${MAX_RETRIES}) reached`)
     callbacks.onError(`최대 재시도 횟수(${MAX_RETRIES}회)를 초과했습니다. 나중에 다시 시도해주세요.`)
+    } finally {
+      if (!completed) {
+        callbacks.onComplete()
+      }
+    }
   }
 
   async generateImage(

@@ -11,7 +11,7 @@ export const PROVIDER_LABELS: Record<Provider, string> = {
 // Provider-specific models
 export const PROVIDER_MODELS: Record<Provider, readonly string[]> = {
   google: ['gemini-3-pro-image-preview', 'gemini-2.5-flash-image'] as const,
-  openai: ['gpt-image-1.5', 'gpt-image-1', 'dall-e-3'] as const,
+  openai: ['gpt-image-1.5', 'gpt-image-1'] as const,
   byteplus: ['seedream-4-5-251128', 'seedream-4-0'] as const,
 }
 

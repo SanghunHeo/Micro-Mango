@@ -45,6 +45,7 @@ const MAX_IMAGE_DIMENSION = 4096
 
 /**
  * Resize image if it exceeds 4K (4096px) in any dimension.
+ * Always converts to PNG format for API compatibility.
  * Maintains aspect ratio and returns a new File object.
  */
 export async function resizeImageIfNeeded(file: File): Promise<File> {
@@ -61,25 +62,31 @@ export async function resizeImageIfNeeded(file: File): Promise<File> {
       console.log(`[Resize] Image loaded: ${width}x${height}`)
 
       // Check if resize is needed
-      if (width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION) {
-        console.log(`[Resize] No resize needed, dimensions within ${MAX_IMAGE_DIMENSION}px`)
+      const needsResize = width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION
+      // Always convert to PNG for API compatibility (providers expect PNG MIME type)
+      const needsConversion = file.type !== 'image/png'
+
+      if (!needsResize && !needsConversion) {
+        console.log(`[Resize] No processing needed, already PNG within ${MAX_IMAGE_DIMENSION}px`)
         resolve(file)
         return
       }
 
-      // Calculate new dimensions maintaining aspect ratio
+      // Calculate new dimensions maintaining aspect ratio (only if resize needed)
       let newWidth = width
       let newHeight = height
 
-      if (width > height) {
-        if (width > MAX_IMAGE_DIMENSION) {
-          newWidth = MAX_IMAGE_DIMENSION
-          newHeight = Math.round((height / width) * MAX_IMAGE_DIMENSION)
-        }
-      } else {
-        if (height > MAX_IMAGE_DIMENSION) {
-          newHeight = MAX_IMAGE_DIMENSION
-          newWidth = Math.round((width / height) * MAX_IMAGE_DIMENSION)
+      if (needsResize) {
+        if (width > height) {
+          if (width > MAX_IMAGE_DIMENSION) {
+            newWidth = MAX_IMAGE_DIMENSION
+            newHeight = Math.round((height / width) * MAX_IMAGE_DIMENSION)
+          }
+        } else {
+          if (height > MAX_IMAGE_DIMENSION) {
+            newHeight = MAX_IMAGE_DIMENSION
+            newWidth = Math.round((width / height) * MAX_IMAGE_DIMENSION)
+          }
         }
       }
 
@@ -113,8 +120,9 @@ export async function resizeImageIfNeeded(file: File): Promise<File> {
             lastModified: Date.now(),
           })
 
+          const action = needsResize ? 'resized' : 'converted to PNG'
           console.log(
-            `Image resized: ${width}x${height} -> ${newWidth}x${newHeight} (${formatFileSize(file.size)} -> ${formatFileSize(resizedFile.size)})`
+            `[Resize] Image ${action}: ${width}x${height} -> ${newWidth}x${newHeight} (${formatFileSize(file.size)} -> ${formatFileSize(resizedFile.size)})`
           )
 
           resolve(resizedFile)
