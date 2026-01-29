@@ -1,15 +1,10 @@
 import { useState } from 'react'
-import { X, Key, Monitor, Ratio, Cpu, BarChart3, RefreshCw, Copy, Check } from 'lucide-react'
+import { X, Key, BarChart3, RefreshCw, Copy, Check, Download } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
-import { useSettingsStore, useUsageStore, formatCost, PROVIDER_PRICING, getGenerationPrice } from '@/stores'
+import { useSettingsStore, useUsageStore, formatCost, PROVIDER_PRICING } from '@/stores'
 import {
   PROVIDERS,
   PROVIDER_LABELS,
-  PROVIDER_MODELS,
-  PROVIDER_RESOLUTIONS,
-  PROVIDER_RESOLUTION_LABELS,
-  PROVIDER_ASPECT_RATIOS,
-  ASPECT_RATIO_LABELS,
   PROVIDER_CONSOLE_URLS,
 } from '@/utils/constants'
 import type { Provider } from '@/utils/constants'
@@ -25,15 +20,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const {
     apiKeys,
     currentProvider,
-    resolution,
-    aspectRatio,
-    model,
     autoDownload,
     setApiKey,
-    setCurrentProvider,
-    setResolution,
-    setAspectRatio,
-    setModel,
     toggleAutoDownload,
   } = useSettingsStore()
 
@@ -53,12 +41,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     }
   }
 
-  // Get provider-specific options
-  const providerModels = PROVIDER_MODELS[currentProvider]
-  const providerResolutions = PROVIDER_RESOLUTIONS[currentProvider]
-  const providerResolutionLabels = PROVIDER_RESOLUTION_LABELS[currentProvider]
-  const providerAspectRatios = PROVIDER_ASPECT_RATIOS[currentProvider]
-
   if (!isOpen) return null
 
   return (
@@ -70,9 +52,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-gray-900 border-l border-gray-800 z-50 flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--bg-secondary)] border-l border-[var(--border-subtle)] z-50 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">
           <h2 className="text-lg font-semibold text-white">Settings</h2>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-5 w-5" />
@@ -81,42 +63,19 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {/* Current Provider */}
+          {/* API Keys */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-              <Cpu className="h-4 w-4" />
-              AI Provider
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {PROVIDERS.map((provider) => (
-                <button
-                  key={provider}
-                  onClick={() => setCurrentProvider(provider)}
-                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                    currentProvider === provider
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  }`}
-                >
-                  {PROVIDER_LABELS[provider]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* API Keys for all providers */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3">
               <Key className="h-4 w-4" />
               API Keys
             </label>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {PROVIDERS.map((provider) => (
-                <div key={provider}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-gray-400">{PROVIDER_LABELS[provider]}</span>
+                <div key={provider} className="bg-[var(--bg-tertiary)] rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm text-gray-300 font-medium">{PROVIDER_LABELS[provider]}</span>
                     {currentProvider === provider && (
-                      <span className="text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded">현재</span>
+                      <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">사용 중</span>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -124,8 +83,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                       type="password"
                       value={apiKeys[provider]}
                       onChange={(e) => setApiKey(provider, e.target.value)}
-                      placeholder={`Enter ${PROVIDER_LABELS[provider]} API key`}
-                      className="flex-1"
+                      placeholder="API key 입력"
+                      className="flex-1 text-sm"
                     />
                     {apiKeys[provider] && (
                       <button
@@ -145,103 +104,28 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     href={PROVIDER_CONSOLE_URLS[provider]}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-blue-400 hover:underline"
+                    className="text-xs text-blue-400 hover:underline mt-1 inline-block"
                   >
-                    Get API key
+                    API key 발급받기 →
                   </a>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Model (provider-specific) */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-              <Cpu className="h-4 w-4" />
-              Model ({PROVIDER_LABELS[currentProvider]})
-            </label>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {providerModels.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Resolution (provider-specific) */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-              <Monitor className="h-4 w-4" />
-              Resolution
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {providerResolutions.map((res) => (
-                <button
-                  key={res}
-                  onClick={() => setResolution(res)}
-                  className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                    resolution === res
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  }`}
-                >
-                  {providerResolutionLabels[res] || res}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Current Price Estimate */}
-          <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-lg p-3 border border-green-800/50">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">현재 설정 기준 이미지당 예상 비용</span>
-              <span className="text-lg font-semibold text-green-400">
-                {formatCost(getGenerationPrice(currentProvider, model, resolution))}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {model} · {resolution}
-            </p>
-          </div>
-
-          {/* Aspect Ratio (provider-specific) - OpenAI uses resolution for ratio */}
-          {currentProvider !== 'openai' && (
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                <Ratio className="h-4 w-4" />
-                Aspect Ratio
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {providerAspectRatios.map((ratio) => (
-                  <button
-                    key={ratio}
-                    onClick={() => setAspectRatio(ratio)}
-                    className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                      aspectRatio === ratio
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
-                    {ASPECT_RATIO_LABELS[ratio] || ratio}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Auto Download */}
-          <div>
+          <div className="bg-[var(--bg-tertiary)] rounded-lg p-3">
             <label className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-300">
-                Auto-download generated images
-              </span>
+              <div className="flex items-center gap-2">
+                <Download className="h-4 w-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-300">
+                  자동 다운로드
+                </span>
+              </div>
               <button
                 onClick={toggleAutoDownload}
                 className={`relative w-11 h-6 rounded-full transition-colors ${
-                  autoDownload ? 'bg-blue-600' : 'bg-gray-700'
+                  autoDownload ? 'bg-yellow-500' : 'bg-gray-700'
                 }`}
               >
                 <span
@@ -251,10 +135,13 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 />
               </button>
             </label>
+            <p className="text-xs text-gray-500 mt-1 ml-6">
+              생성 완료 시 이미지 자동 저장
+            </p>
           </div>
 
           {/* Usage Statistics */}
-          <div className="border-t border-gray-800 pt-6">
+          <div className="border-t border-[var(--border-subtle)] pt-6">
             <div className="flex items-center justify-between mb-4">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-300">
                 <BarChart3 className="h-4 w-4" />
@@ -271,15 +158,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
 
             {/* Total Summary */}
-            <div className="bg-gray-800/50 rounded-lg p-3 mb-4">
+            <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 rounded-lg p-4 mb-4 border border-yellow-900/30">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-500">총 생성 횟수</p>
-                  <p className="text-lg font-semibold text-white">{totalGenerations}회</p>
+                  <p className="text-2xl font-bold text-white">{totalGenerations}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">예상 총 비용</p>
-                  <p className="text-lg font-semibold text-green-400">{formatCost(totalEstimatedCost)}</p>
+                  <p className="text-2xl font-bold text-green-400">{formatCost(totalEstimatedCost)}</p>
                 </div>
               </div>
             </div>
@@ -298,8 +185,8 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     key={provider}
                     className={`p-3 rounded-lg border transition-colors ${
                       currentProvider === provider
-                        ? 'bg-blue-900/20 border-blue-700'
-                        : 'bg-gray-800/30 border-gray-800'
+                        ? 'bg-yellow-900/10 border-yellow-700/50'
+                        : 'bg-[var(--bg-tertiary)] border-[var(--border-subtle)]'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -307,12 +194,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         {PROVIDER_LABELS[provider as Provider]}
                       </span>
                       {currentProvider === provider && (
-                        <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">현재</span>
+                        <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">사용 중</span>
                       )}
                     </div>
 
                     {providerUsage.generationCount > 0 ? (
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <div className="flex justify-between text-xs">
                           <span className="text-gray-500">생성</span>
                           <span className="text-gray-300">
@@ -322,7 +209,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         </div>
                         <div className="flex justify-between text-xs">
                           <span className="text-gray-500">예상 비용</span>
-                          <span className="text-green-400">{formatCost(providerUsage.estimatedCost)}</span>
+                          <span className="text-green-400 font-medium">{formatCost(providerUsage.estimatedCost)}</span>
                         </div>
                         {providerUsage.lastUsed && (
                           <div className="flex justify-between text-xs">
@@ -348,16 +235,16 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               })}
             </div>
 
-            <p className="text-[10px] text-gray-600 mt-3 text-center">
+            <p className="text-[10px] text-gray-600 mt-4 text-center">
               * 예상 비용은 참고용이며 실제 청구 금액과 다를 수 있습니다
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-[var(--border-subtle)]">
           <p className="text-xs text-gray-500 text-center">
-            Settings are saved automatically
+            설정은 자동으로 저장됩니다
           </p>
         </div>
       </div>

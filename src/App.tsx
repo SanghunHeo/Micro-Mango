@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Header, MainLayout } from '@/components/layout'
+import { PromptArea } from '@/components/prompt'
 import { QueueList } from '@/components/gallery'
 import { SettingsPanel } from '@/components/settings'
 import { useSettingsStore, useQueueStore, useUsageStore } from '@/stores'
@@ -10,12 +10,11 @@ import { fileToBase64 } from '@/utils/imageUtils'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [headerHeight, setHeaderHeight] = useState(64) // default 64px
   const isProcessingRef = useRef(false)
   const timerRef = useRef<number | null>(null)
   const startTimeRef = useRef<number>(0)
 
-  const { getCurrentApiKey, resolution, aspectRatio, model, currentProvider, autoDownload } = useSettingsStore()
+  const { getCurrentApiKey, getApiKeyForProvider, resolution, aspectRatio, model, currentProvider, autoDownload } = useSettingsStore()
   const {
     items,
     addItem,
@@ -61,8 +60,12 @@ function App() {
     const nextItem = getNextPending()
     if (!nextItem) return
 
-    const apiKey = getCurrentApiKey()
-    if (!apiKey) return
+    // Get API key for the queue item's provider, not the current provider
+    const apiKey = getApiKeyForProvider(nextItem.provider as Provider)
+    if (!apiKey) {
+      failItem(nextItem.id, `${nextItem.provider} provider의 API 키가 설정되지 않았습니다.`)
+      return
+    }
 
     isProcessingRef.current = true
     startProcessing(nextItem.id)
@@ -174,7 +177,7 @@ function App() {
     }
   }, [
     getNextPending,
-    getCurrentApiKey,
+    getApiKeyForProvider,
     startProcessing,
     updateProgress,
     setStatusMessage,
@@ -205,18 +208,22 @@ function App() {
   }, [])
 
   return (
-    <>
-      <Header
-        onOpenSettings={() => setSettingsOpen(true)}
+    <div className="h-screen flex flex-col bg-[var(--bg-primary)]">
+      {/* Prompt Area */}
+      <PromptArea
         onSubmit={handleSubmit}
+        onOpenSettings={() => setSettingsOpen(true)}
         disabled={false}
-        onHeightChange={setHeaderHeight}
       />
-      <MainLayout headerHeight={headerHeight}>
+
+      {/* Queue List */}
+      <main className="flex-1 overflow-y-auto bg-[var(--bg-primary)]">
         <QueueList />
-      </MainLayout>
+      </main>
+
+      {/* Settings Panel */}
       <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
-    </>
+    </div>
   )
 }
 

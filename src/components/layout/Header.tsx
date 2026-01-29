@@ -96,17 +96,15 @@ interface HeaderProps {
   onOpenSettings: () => void
   onSubmit: (prompt: string, images: File[]) => void
   disabled?: boolean
-  onHeightChange?: (height: number) => void
 }
 
-export function Header({ onOpenSettings, onSubmit, disabled, onHeightChange }: HeaderProps) {
+export function Header({ onOpenSettings, onSubmit, disabled }: HeaderProps) {
   const [prompt, setPrompt] = useState('')
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([])
   const [optionsOpen, setOptionsOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [isProcessingImages, setIsProcessingImages] = useState(false)
   const [processingMessage, setProcessingMessage] = useState('')
-  const headerRef = useRef<HTMLElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const optionsRef = useRef<HTMLDivElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)
@@ -149,23 +147,6 @@ export function Header({ onOpenSettings, onSubmit, disabled, onHeightChange }: H
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Track header height changes
-  useEffect(() => {
-    if (!headerRef.current || !onHeightChange) return
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (headerRef.current) {
-        // Use offsetHeight for accurate measurement including padding and border
-        onHeightChange(headerRef.current.offsetHeight)
-      }
-    })
-
-    resizeObserver.observe(headerRef.current)
-    // Initial height
-    onHeightChange(headerRef.current.offsetHeight)
-
-    return () => resizeObserver.disconnect()
-  }, [onHeightChange])
 
   // Handle pendingPrompt from Use button (QueueItemRow)
   useEffect(() => {
@@ -353,7 +334,7 @@ export function Header({ onOpenSettings, onSubmit, disabled, onHeightChange }: H
     requestAnimationFrame(() => {
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
-        const newHeight = Math.max(40, Math.min(textareaRef.current.scrollHeight, 120))
+        const newHeight = Math.max(40, Math.min(textareaRef.current.scrollHeight, 200))
         textareaRef.current.style.height = `${newHeight}px`
         textareaRef.current.focus()
       }
@@ -363,10 +344,10 @@ export function Header({ onOpenSettings, onSubmit, disabled, onHeightChange }: H
   // Auto-resize textarea
   const handleTextareaChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setPrompt(e.target.value)
-    // Auto-resize with minimum height
+    // Auto-resize with minimum height, max height allows scrollbar
     const textarea = e.target
     textarea.style.height = 'auto'
-    const newHeight = Math.max(40, Math.min(textarea.scrollHeight, 120))
+    const newHeight = Math.max(40, Math.min(textarea.scrollHeight, 200))
     textarea.style.height = `${newHeight}px`
   }
 
@@ -381,10 +362,9 @@ export function Header({ onOpenSettings, onSubmit, disabled, onHeightChange }: H
 
   return (
     <header
-      ref={headerRef}
       {...getRootProps()}
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800',
+        'sticky top-0 z-50 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800 flex-shrink-0',
         isDragActive && 'bg-blue-900/20 border-blue-500'
       )}
     >
@@ -497,8 +477,8 @@ export function Header({ onOpenSettings, onSubmit, disabled, onHeightChange }: H
                   onPaste={handlePaste}
                   placeholder="What will you imagine?"
                   rows={1}
-                  className="w-full bg-gray-800/50 border border-gray-700 rounded-2xl px-4 py-2 pr-20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none overflow-hidden"
-                  style={{ minHeight: '40px', maxHeight: '120px' }}
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-2xl px-4 py-2 pr-20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none overflow-y-auto"
+                  style={{ minHeight: '40px', maxHeight: '200px' }}
                   disabled={disabled}
                 />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">

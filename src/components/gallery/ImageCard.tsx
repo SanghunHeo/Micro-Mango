@@ -1,16 +1,11 @@
 import { Download, X, AlertCircle, Clock } from 'lucide-react'
 import { useQueueStore, type QueueItem } from '@/stores'
 import { downloadImage } from '@/services/download'
+import { formatTime } from '@/utils/timeUtils'
 import { cn } from '@/utils/cn'
 
 interface ImageCardProps {
   item: QueueItem
-}
-
-// Format elapsed time
-const formatTime = (ms: number | undefined) => {
-  if (!ms) return '0.0s'
-  return `${(ms / 1000).toFixed(1)}s`
 }
 
 // Get provider display name
@@ -133,7 +128,7 @@ export function ImageCard({ item }: ImageCardProps) {
                 <span className="text-xs text-gray-400">{item.resolution}</span>
                 <span className="text-xs text-gray-400">{item.aspectRatio}</span>
                 {item.elapsedTime && (
-                  <span className="text-xs text-gray-400">{(item.elapsedTime / 1000).toFixed(1)}s</span>
+                  <span className="text-xs text-gray-400">{formatTime(item.elapsedTime)}</span>
                 )}
               </div>
             </div>

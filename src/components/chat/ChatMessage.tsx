@@ -2,6 +2,7 @@ import { User, Bot, Download } from 'lucide-react'
 import { Button } from '@/components/ui'
 import type { ChatMessage as ChatMessageType } from '@/stores'
 import { base64ToDataUrl } from '@/utils/imageUtils'
+import { formatTime } from '@/utils/timeUtils'
 import { cn } from '@/utils/cn'
 
 interface ChatMessageProps {
@@ -79,7 +80,7 @@ export function ChatMessage({ message, onDownload }: ChatMessageProps) {
               )}
               {message.metadata.generationTime && (
                 <span className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-400">
-                  {(message.metadata.generationTime / 1000).toFixed(1)}s
+                  {formatTime(message.metadata.generationTime)}
                 </span>
               )}
             </div>

@@ -1,17 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Download, RotateCcw, Copy, Trash2, AlertCircle, Clock, ImageIcon, X, ChevronLeft, ChevronRight, Check } from 'lucide-react'
-import { useQueueStore, useInputStore, type QueueItem } from '@/stores'
+import { useQueueStore, useInputStore, useSettingsStore, type QueueItem } from '@/stores'
+import type { Provider } from '@/utils/constants'
 import { downloadImage } from '@/services/download'
+import { formatTime } from '@/utils/timeUtils'
 import { cn } from '@/utils/cn'
 
 interface QueueItemRowProps {
   item: QueueItem
-}
-
-// Format elapsed time
-const formatTime = (ms: number | undefined) => {
-  if (!ms) return '0.0s'
-  return `${(ms / 1000).toFixed(1)}s`
 }
 
 // Get provider display name
@@ -62,9 +58,11 @@ const getDisplayMessage = (item: QueueItem): string => {
 export function QueueItemRow({ item }: QueueItemRowProps) {
   const { removeItem, rerunItem, loadItemImages } = useQueueStore()
   const { setPendingPrompt } = useInputStore()
+  const { setCurrentProvider, setModel, setResolution, setAspectRatio } = useSettingsStore()
   const [hoveredImageIndex, setHoveredImageIndex] = useState<number | null>(null)
   const [isHoveringInfo, setIsHoveringInfo] = useState(false)
   const [modalImageIndex, setModalImageIndex] = useState<number | null>(null)
+  const [finalImageModalIndex, setFinalImageModalIndex] = useState<number | null>(null)
   const [copied, setCopied] = useState(false)
 
   const finalImages = getFinalImages(item)
@@ -89,21 +87,32 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
 
   // Handle keyboard navigation in modal
   useEffect(() => {
-    if (modalImageIndex === null) return
+    if (modalImageIndex === null && finalImageModalIndex === null) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setModalImageIndex(null)
-      } else if (e.key === 'ArrowLeft' && modalImageIndex > 0) {
-        setModalImageIndex(modalImageIndex - 1)
-      } else if (e.key === 'ArrowRight' && modalImageIndex < referenceImages.length - 1) {
-        setModalImageIndex(modalImageIndex + 1)
+        setFinalImageModalIndex(null)
+      } else if (e.key === 'ArrowLeft') {
+        if (modalImageIndex !== null && modalImageIndex > 0) {
+          setModalImageIndex(modalImageIndex - 1)
+        }
+        if (finalImageModalIndex !== null && finalImageModalIndex > 0) {
+          setFinalImageModalIndex(finalImageModalIndex - 1)
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (modalImageIndex !== null && modalImageIndex < referenceImages.length - 1) {
+          setModalImageIndex(modalImageIndex + 1)
+        }
+        if (finalImageModalIndex !== null && finalImageModalIndex < finalImages.length - 1) {
+          setFinalImageModalIndex(finalImageModalIndex + 1)
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [modalImageIndex, referenceImages.length])
+  }, [modalImageIndex, finalImageModalIndex, referenceImages.length, finalImages.length])
 
   const handleDownload = (imageIndex: number = 0) => {
     const image = finalImages[imageIndex]
@@ -126,6 +135,12 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
   }
 
   const handleUse = async () => {
+    // Restore all settings from the queue item
+    setCurrentProvider(item.provider as Provider)
+    setModel(item.model)
+    setResolution(item.resolution)
+    setAspectRatio(item.aspectRatio)
+
     // If reference images not in memory, load from IndexedDB
     let images = item.referenceImages
     if ((!images || images.length === 0) && item.status !== 'pending') {
@@ -161,21 +176,25 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
             <div
               key={index}
               className={cn(
-                'relative overflow-hidden',
+                'relative overflow-hidden cursor-pointer',
                 imageCount === 3 && index === 2 && 'col-span-2'
               )}
               onMouseEnter={() => setHoveredImageIndex(index)}
               onMouseLeave={() => setHoveredImageIndex(null)}
+              onClick={() => setFinalImageModalIndex(index)}
             >
               <img
                 src={getImageSrc(image)}
                 alt={`${item.prompt} - ${index + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform hover:scale-105"
               />
               {/* Download button on individual image hover */}
               {hoveredImageIndex === index && (
                 <button
-                  onClick={() => handleDownload(index)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDownload(index)
+                  }}
                   className="absolute bottom-2 right-2 p-1.5 bg-black/70 hover:bg-black rounded-full text-white transition-colors"
                   title="Download"
                 >
@@ -247,16 +266,16 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
   }
 
   return (
-    <div className="group flex bg-gray-900 rounded-lg overflow-hidden border border-gray-800 hover:border-gray-700 transition-colors">
+    <div className="group flex bg-[var(--bg-card)] rounded-xl overflow-hidden border border-[var(--border-subtle)] hover:border-[var(--border-hover)] transition-all hover:shadow-lg hover:shadow-black/20">
       {/* Image Section (Left) */}
       <div
-        className="relative flex-shrink-0 bg-gray-800 w-48 sm:w-56 md:w-64"
+        className="relative flex-shrink-0 bg-[var(--bg-tertiary)] w-48 sm:w-56 md:w-72"
         style={{ aspectRatio: getAspectRatio() }}
       >
         {renderImageGrid()}
       </div>
 
-      {/* Info Section (Right) */}
+      {/* Info Section */}
       <div
         className="flex-1 p-4 flex flex-col min-w-0"
         onMouseEnter={() => setIsHoveringInfo(true)}
@@ -305,16 +324,19 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
           )}
         </div>
 
-        {/* Reference images thumbnails */}
+        {/* Reference images thumbnails - always visible */}
         {referenceImages.length > 0 && (
-          <div className="flex items-center gap-2 mb-3">
-            <ImageIcon className="h-3 w-3 text-gray-500 flex-shrink-0" />
-            <div className="flex gap-1.5">
+          <div className="mb-3 p-2 bg-[var(--bg-tertiary)] rounded-lg">
+            <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-2">
+              <ImageIcon className="h-3.5 w-3.5" />
+              <span>참조 이미지 {referenceImages.length}장</span>
+            </div>
+            <div className="flex gap-2 flex-wrap">
               {referenceImages.map((img, index) => (
                 <button
                   key={index}
                   onClick={() => setModalImageIndex(index)}
-                  className="h-8 w-8 rounded border border-gray-700 hover:border-blue-500 overflow-hidden transition-colors"
+                  className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg border-2 border-gray-600 hover:border-yellow-500 overflow-hidden transition-all hover:scale-105"
                 >
                   <img
                     src={getImageSrc(img)}
@@ -324,9 +346,6 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
                 </button>
               ))}
             </div>
-            <span className="text-xs text-gray-500">
-              참조 {referenceImages.length}장
-            </span>
           </div>
         )}
 
@@ -335,14 +354,6 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
           <p className="text-xs text-gray-500 italic line-clamp-2 mb-3">
             "{item.thoughtTexts[item.thoughtTexts.length - 1]}"
           </p>
-        )}
-
-        {/* Elapsed time for generating */}
-        {item.status === 'generating' && (
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            <Clock className="h-3 w-3" />
-            <span>{formatTime(item.elapsedTime)}</span>
-          </div>
         )}
 
         {/* Error message */}
@@ -393,6 +404,7 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
           </button>
         </div>
       </div>
+
 
       {/* Reference Image Modal */}
       {modalImageIndex !== null && referenceImages[modalImageIndex] && (
@@ -445,6 +457,94 @@ export function QueueItemRow({ item }: QueueItemRowProps) {
                 {modalImageIndex + 1} / {referenceImages.length}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Final Image Lightbox Modal */}
+      {finalImageModalIndex !== null && finalImages[finalImageModalIndex] && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setFinalImageModalIndex(null)}
+        >
+          <div
+            className="relative max-w-[95vw] max-h-[95vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Bar */}
+            <div className="flex items-center justify-between px-4 py-2 mb-2">
+              <div className="flex items-center gap-2">
+                {finalImages.length > 1 && (
+                  <span className="text-sm text-gray-400">
+                    {finalImageModalIndex + 1} / {finalImages.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDownload(finalImageModalIndex)}
+                  className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-white transition-colors"
+                  title="Download"
+                >
+                  <Download className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setFinalImageModalIndex(null)}
+                  className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-white transition-colors"
+                  title="Close"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Image */}
+            <div className="relative flex-1 flex items-center justify-center">
+              {finalImages.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setFinalImageModalIndex(Math.max(0, finalImageModalIndex - 1))}
+                    disabled={finalImageModalIndex === 0}
+                    className="absolute left-4 p-3 bg-black/50 hover:bg-black/70 rounded-full text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors z-10"
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </button>
+                  <button
+                    onClick={() => setFinalImageModalIndex(Math.min(finalImages.length - 1, finalImageModalIndex + 1))}
+                    disabled={finalImageModalIndex === finalImages.length - 1}
+                    className="absolute right-4 p-3 bg-black/50 hover:bg-black/70 rounded-full text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors z-10"
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </button>
+                </>
+              )}
+
+              <img
+                src={getImageSrc(finalImages[finalImageModalIndex])}
+                alt={item.prompt}
+                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+              />
+            </div>
+
+            {/* Prompt */}
+            <div className="px-4 py-3 mt-2 bg-gray-900/80 rounded-lg mx-4">
+              <p className="text-sm text-gray-300 line-clamp-3">
+                {item.prompt}
+              </p>
+              <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                <span>{item.resolution}</span>
+                <span>•</span>
+                <span>{item.aspectRatio}</span>
+                <span>•</span>
+                <span>{item.model}</span>
+                {item.elapsedTime && (
+                  <>
+                    <span>•</span>
+                    <span>{formatTime(item.elapsedTime)}</span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

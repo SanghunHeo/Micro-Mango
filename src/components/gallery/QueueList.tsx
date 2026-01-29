@@ -16,10 +16,10 @@ export function QueueList() {
 
   if (items.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-gray-500 p-8">
-        <Sparkles className="h-16 w-16 mb-4 text-yellow-400/50" />
-        <h2 className="text-xl font-medium text-gray-400 mb-2">Welcome to Micro Mango</h2>
-        <p className="text-center max-w-md text-gray-500">
+      <div className="h-full flex flex-col items-center justify-center p-8">
+        <Sparkles className="h-20 w-20 mb-6 text-yellow-400/30" />
+        <h2 className="text-2xl font-medium text-gray-300 mb-3">Welcome to Micro Mango</h2>
+        <p className="text-center max-w-md text-gray-500 leading-relaxed">
           Enter a prompt above to start generating images.
           <br />
           <span className="text-sm">Drag & drop or paste images as reference.</span>
@@ -30,7 +30,7 @@ export function QueueList() {
 
   return (
     <div className="p-4">
-      <div className="flex flex-col gap-4 max-w-4xl mx-auto">
+      <div className="flex flex-col gap-3 max-w-5xl mx-auto px-0 sm:px-4">
         {sortedItems.map((item) => (
           <QueueItemRow key={item.id} item={item} />
         ))}

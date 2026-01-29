@@ -1,22 +1,46 @@
 @import "tailwindcss";
 
+/* Color Theme Variables */
+:root {
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #111111;
+  --bg-tertiary: #1a1a1a;
+  --bg-card: #141414;
+  --bg-elevated: #1e1e1e;
+  --border-subtle: #222222;
+  --border-default: #2a2a2a;
+  --border-hover: #3a3a3a;
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
+  --accent-mango: #f59e0b;
+  --accent-mango-hover: #fbbf24;
+  --accent-mango-glow: rgba(245, 158, 11, 0.15);
+}
+
+/* Base styles */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 4px;
+  background: var(--border-default);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: var(--border-hover);
 }
 
 /* Custom animations */
@@ -55,4 +79,75 @@
 
 .animate-thinking-dot:nth-child(2) {
   animation-delay: -0.16s;
+}
+
+/* Glow effects */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--accent-mango-glow);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--accent-mango-glow), 0 0 60px var(--accent-mango-glow);
+  }
+}
+
+.glow-mango {
+  box-shadow: 0 0 20px var(--accent-mango-glow);
+}
+
+.glow-mango-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Focus glow for inputs */
+.focus-glow:focus {
+  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent-mango-glow);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* Gradient text */
+.gradient-text-mango {
+  background: linear-gradient(135deg, var(--accent-mango) 0%, #fb923c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Smooth image loading */
+img {
+  transition: opacity 0.3s ease;
+}
+
+img[loading="lazy"] {
+  opacity: 0;
+}
+
+img[loading="lazy"].loaded,
+img:not([loading="lazy"]) {
+  opacity: 1;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--accent-mango);
+  color: var(--bg-primary);
+}
+
+/* Masonry grid improvements */
+.masonry-grid {
+  column-gap: 1rem;
+}
+
+.masonry-grid > * {
+  break-inside: avoid;
+  margin-bottom: 1rem;
 }

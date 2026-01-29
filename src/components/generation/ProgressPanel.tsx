@@ -1,6 +1,7 @@
 import { ThinkingDots, ProgressBar } from '@/components/ui'
 import type { GenerationStep } from '@/stores'
 import { base64ToDataUrl } from '@/utils/imageUtils'
+import { formatTime } from '@/utils/timeUtils'
 import { Brain, Image as ImageIcon, CheckCircle, AlertCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -12,11 +13,6 @@ interface ProgressPanelProps {
 }
 
 export function ProgressPanel({ step, thoughtTexts, interimImages, elapsedTime }: ProgressPanelProps) {
-  const formatTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000)
-    return `${seconds}s`
-  }
-
   const getProgress = () => {
     switch (step) {
       case 'thinking': return 30

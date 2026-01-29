@@ -35,6 +35,8 @@ interface SettingsActions {
 
   // Helper to get current provider's API key
   getCurrentApiKey: () => string
+  // Helper to get specific provider's API key
+  getApiKeyForProvider: (provider: Provider) => string
 }
 
 type SettingsStore = SettingsState & SettingsActions
@@ -93,6 +95,11 @@ export const useSettingsStore = create<SettingsStore>()(
       getCurrentApiKey: () => {
         const state = get()
         return state.apiKeys[state.currentProvider]
+      },
+
+      getApiKeyForProvider: (provider) => {
+        const state = get()
+        return state.apiKeys[provider]
       },
     }),
     {
